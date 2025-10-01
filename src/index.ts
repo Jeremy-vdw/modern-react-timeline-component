@@ -13,9 +13,3 @@ export type {
   ItemProps,
   ResizeProps,
 } from './components/Timeline';
-
-// Utility functions
-export * from './utils';
-
-// Constants (locales, options, emojis)
-export * from './constants';

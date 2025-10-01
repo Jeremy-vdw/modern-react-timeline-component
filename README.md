@@ -28,11 +28,11 @@ A modern, feature-rich timeline/calendar component for React applications. Built
 ## Installation
 
 ```bash
-npm install @yourname/modern-react-timeline
+npm install modern-react-timeline-component
 # or
-yarn add @yourname/modern-react-timeline
+yarn add modern-react-timeline-component
 # or
-pnpm add @yourname/modern-react-timeline
+pnpm add modern-react-timeline-component
 ```
 
 ### Peer Dependencies
@@ -51,7 +51,7 @@ This component requires Tailwind CSS. Add the component path to your `tailwind.c
 module.exports = {
   content: [
     './src/**/*.{js,jsx,ts,tsx}',
-    './node_modules/@yourname/modern-react-timeline/dist/**/*.{js,mjs}',
+    './node_modules/modern-react-timeline-component/dist/**/*.{js,mjs}',
   ],
   // ... rest of your config
 }
@@ -62,14 +62,14 @@ module.exports = {
 Import the component styles in your main CSS file or entry point:
 
 ```tsx
-import '@yourname/modern-react-timeline/styles';
+import 'modern-react-timeline-component/styles';
 ```
 
 ## Quick Start
 
 ```tsx
-import { Timeline, TimelineItem, TimelineGroupData, Category } from '@yourname/modern-react-timeline';
-import '@yourname/modern-react-timeline/styles';
+import { Timeline, TimelineItem, TimelineGroupData, Category } from 'modern-react-timeline-component';
+import 'modern-react-timeline-component/styles';
 
 const groups: TimelineGroupData[] = [
   { id: 'group-1', title: 'Team Alpha' },
@@ -189,7 +189,7 @@ interface Category {
 ### Custom Item Renderer
 
 ```tsx
-import { ItemRendererProps } from '@yourname/modern-react-timeline';
+import { ItemRendererProps } from 'modern-react-timeline-component';
 
 const customItemRenderer = ({ item, itemContext, getItemProps, getResizeProps }: ItemRendererProps) => {
   const { left: leftResize, right: rightResize } = getResizeProps();
@@ -237,7 +237,7 @@ const customGroupRenderer = ({ group }) => (
 ### Custom Controls Renderer
 
 ```tsx
-import { ControlsRendererProps } from '@yourname/modern-react-timeline';
+import { ControlsRendererProps } from 'modern-react-timeline-component';
 
 const customControlsRenderer = ({ controls, state }: ControlsRendererProps) => (
   <div className="flex gap-2 p-4">
@@ -264,7 +264,7 @@ const customControlsRenderer = ({ controls, state }: ControlsRendererProps) => (
 
 ```tsx
 import { useRef } from 'react';
-import { Timeline, TimelineRef } from '@yourname/modern-react-timeline';
+import { Timeline, TimelineRef } from 'modern-react-timeline-component';
 
 function App() {
   const timelineRef = useRef<TimelineRef>(null);
@@ -322,30 +322,6 @@ The component supports 11+ locales with proper date/time formatting:
 - 🇸🇦 Arabic (`ar`)
 - 🇮🇳 Hindi (`hi`)
 
-## Utilities
-
-The package also exports useful utility functions:
-
-```tsx
-import { 
-  uses24HourFormat, 
-  createLighterColor, 
-  formatDuration,
-  AVAILABLE_LOCALES,
-  GROUP_BAR_WIDTH_OPTIONS,
-  CATEGORY_EMOJIS
-} from '@yourname/modern-react-timeline';
-
-// Check if locale uses 24-hour format
-const is24Hour = uses24HourFormat('nl'); // true
-
-// Create lighter color for gradients
-const lighterColor = createLighterColor('#3b82f6');
-
-// Format duration in minutes
-const formatted = formatDuration(125); // "2h 5m"
-```
-
 ## Styling
 
 The component uses Tailwind CSS classes. You can customize the theme by extending your Tailwind configuration:
@@ -367,16 +343,9 @@ module.exports = {
 }
 ```
 
-## Browser Support
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
 ## License
 
-MIT © [Your Name]
+MIT © Jeremie Van de Walle
 
 ## Contributing
 
@@ -384,4 +353,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-If you encounter any issues or have questions, please file an issue on the [GitHub repository](https://github.com/yourusername/modern-react-timeline-component/issues).
+If you encounter any issues or have questions, please file an issue on the [GitHub repository](https://github.com/Jeremy-vdw/modern-react-timeline-component/issues).
