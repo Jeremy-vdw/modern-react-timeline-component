@@ -11,6 +11,7 @@ interface TimelineItemProps {
   categories: Category[];
   position: { left: string; width: string };
   height: number;
+  lane: number;
   isSelected: boolean;
   selectable?: boolean;
   onClick: () => void;
@@ -29,6 +30,7 @@ const TimelineItemComponentBase = ({
   categories,
   position,
   height,
+  lane,
   isSelected,
   selectable = true,
   onClick,
@@ -269,6 +271,11 @@ const TimelineItemComponentBase = ({
     );
   }
 
+  // Calculate vertical position based on lane
+  const verticalPadding = 6;
+  const itemHeight = height - 12;
+  const topPosition = lane * height + verticalPadding;
+
   // Default rendering
   return (
     <div
@@ -276,8 +283,8 @@ const TimelineItemComponentBase = ({
       className={itemClasses}
       style={{
         ...position,
-        height: `${height - 12}px`,
-        top: '6px',
+        height: `${itemHeight}px`,
+        top: `${topPosition}px`,
         minWidth: '2px',
         backgroundColor: categoryStyle.backgroundColor,
         color: categoryStyle.color,
@@ -370,6 +377,7 @@ export const TimelineItemComponent = memo(TimelineItemComponentBase, (prevProps,
     prevProps.position.left === nextProps.position.left &&
     prevProps.position.width === nextProps.position.width &&
     prevProps.height === nextProps.height &&
+    prevProps.lane === nextProps.lane &&
     prevProps.selectable === nextProps.selectable
   );
 });

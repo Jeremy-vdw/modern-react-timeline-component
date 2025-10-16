@@ -11,6 +11,8 @@ interface TimelineGroupProps {
   timeEnd: Date;
   height: number;
   top: number;
+  laneHeight: number;
+  itemLanes: Map<string, number>;
   selectedItem: string | null;
   selectable?: boolean;
   onItemClick: (item: TimelineItem) => void;
@@ -30,6 +32,8 @@ const TimelineGroupComponent = ({
   timeEnd,
   height,
   top,
+  laneHeight,
+  itemLanes,
   selectedItem,
   selectable = true,
   onItemClick,
@@ -114,10 +118,12 @@ const TimelineGroupComponent = ({
       {/* Timeline Items */}
       {items.map((item) => {
         const position = getItemPosition(item);
-        const isVisible = dayjs(item.end).isAfter(dayjs(timeStart)) && 
+        const isVisible = dayjs(item.end).isAfter(dayjs(timeStart)) &&
                          dayjs(item.start).isBefore(dayjs(timeEnd));
-        
+
         if (!isVisible) return null;
+
+        const lane = itemLanes.get(item.id) || 0;
 
         return (
           <TimelineItemComponent
@@ -125,7 +131,8 @@ const TimelineGroupComponent = ({
             item={item}
             categories={categories}
             position={position}
-            height={height}
+            height={laneHeight}
+            lane={lane}
             isSelected={selectedItem === item.id}
             selectable={selectable}
             onClick={() => onItemClick(item)}

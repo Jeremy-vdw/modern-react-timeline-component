@@ -21,6 +21,7 @@ import { TimelineGroup } from "./TimelineGroup";
 import { TimelineHeader } from "./TimelineHeader";
 import { TimelineLegend } from "./TimelineLegend";
 import dayjs from "dayjs";
+import { calculateGroupLaneAssignments } from "../utils/laneAssignment";
 
 export interface Category {
   id: string;
@@ -197,7 +198,35 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   const [zoom, setZoom] = useState(1);
 
   const totalDuration = dayjs(timeEnd).diff(dayjs(timeStart));
-  const groupHeight = rowHeight;
+  const laneHeight = rowHeight; // Height of each lane within a group
+
+  // Calculate lane assignments for all groups
+  const groupLaneAssignments = useMemo(() => {
+    return calculateGroupLaneAssignments(groups, items);
+  }, [groups, items]);
+
+  // Calculate dynamic height for each group based on number of lanes
+  const groupHeights = useMemo(() => {
+    return groups.map(group => {
+      const laneAssignment = groupLaneAssignments.get(group.id);
+      const totalLanes = laneAssignment?.totalLanes || 1;
+      return totalLanes * laneHeight;
+    });
+  }, [groups, groupLaneAssignments, laneHeight]);
+
+  // Calculate cumulative heights for positioning
+  const cumulativeHeights = useMemo(() => {
+    const cumulative = [0];
+    for (let i = 0; i < groupHeights.length; i++) {
+      cumulative.push(cumulative[i] + groupHeights[i]);
+    }
+    return cumulative;
+  }, [groupHeights]);
+
+  // Total height of all groups
+  const totalGroupsHeight = useMemo(() => {
+    return groupHeights.reduce((sum, height) => sum + height, 0);
+  }, [groupHeights]);
 
   // Calculate timeline content width based on total range (12 months)
   // Base width should show 1 week by default at 100% zoom
@@ -457,10 +486,17 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
       // Adjust for header height in non-sticky mode
       const headerOffset = stickyHeader ? 0 : 60;
       const relativeY = y - rect.top + scrollTop - headerOffset;
-      const groupIndex = Math.floor(relativeY / groupHeight);
-      return groups[groupIndex]?.id || groups[0]?.id;
+
+      // Find which group this Y position falls into using cumulative heights
+      for (let i = 0; i < groups.length; i++) {
+        if (relativeY >= cumulativeHeights[i] && relativeY < cumulativeHeights[i + 1]) {
+          return groups[i].id;
+        }
+      }
+
+      return groups[groups.length - 1]?.id || groups[0]?.id;
     },
-    [groups, groupHeight, stickyHeader],
+    [groups, cumulativeHeights, stickyHeader],
   );
 
   // Function to scroll to a specific group
@@ -480,8 +516,8 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
 
     // Calculate target scroll position based on sticky header mode
     const headerOffset = stickyHeader ? 0 : 60; // Header height in non-sticky mode
-    const groupTop = groupIndex * groupHeight + headerOffset;
-    const groupBottom = groupTop + groupHeight;
+    const groupTop = cumulativeHeights[groupIndex] + headerOffset;
+    const groupBottom = groupTop + groupHeights[groupIndex];
 
     // Check if the group is already visible
     const visibleTop = currentScrollTop;
@@ -489,14 +525,14 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
 
     // If the group is already fully visible, do nothing
     const isGroupVisible = groupTop >= visibleTop && groupBottom <= visibleBottom;
-    
+
     if (isGroupVisible) {
       return;
     }
 
     // Calculate optimal scroll position to center the group
-    const optimalScrollTop = groupTop - (containerHeight / 2) + (groupHeight / 2);
-    
+    const optimalScrollTop = groupTop - (containerHeight / 2) + (groupHeights[groupIndex] / 2);
+
     // Clamp scroll position to valid range
     const maxScrollTop = scrollContainer.scrollHeight - containerHeight;
     const targetScrollTop = Math.max(0, Math.min(maxScrollTop, optimalScrollTop));
@@ -506,7 +542,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
       top: targetScrollTop,
       behavior: 'smooth'
     });
-  }, [groups, groupHeight, stickyHeader]);
+  }, [groups, cumulativeHeights, groupHeights, stickyHeader]);
 
   // Memoize grouped items to prevent filtering on every render
   // This creates a Map of groupId -> items[] for O(1) lookup
@@ -656,15 +692,15 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                 {/* Sticky Group Labels - stays visible during horizontal scroll */}
                 <div
                   className="sticky left-0 top-0 bg-muted border-r z-50"
-                  style={{ width: `${groupBarWidth}px`, height: `${groups.length * groupHeight}px` }}
+                  style={{ width: `${groupBarWidth}px`, height: `${totalGroupsHeight}px` }}
                 >
                   {groups.map((group, index) => (
                     <div
                       key={group.id}
                       className="absolute flex items-center px-4 border-b border-r bg-muted"
                       style={{
-                        height: groupHeight,
-                        top: `${index * groupHeight}px`,
+                        height: groupHeights[index],
+                        top: `${cumulativeHeights[index]}px`,
                         width: `${groupBarWidth}px`,
                         left: 0
                       }}
@@ -681,7 +717,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                     left: `${groupBarWidth}px`,
                     top: 0,
                     width: `${timelineWidth}px`,
-                    height: `${groups.length * groupHeight}px`,
+                    height: `${totalGroupsHeight}px`,
                   }}
                 >
                   {/* Current time indicator for content area */}
@@ -698,28 +734,33 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                     }}
                   />
 
-                  {groups.map((group, index) => (
-                    <TimelineGroup
-                      key={group.id}
-                      group={group}
-                      categories={categories}
-                      items={groupedItems.get(group.id) || []}
-                      timeStart={timeStart}
-                      timeEnd={timeEnd}
-                      height={groupHeight}
-                      top={index * groupHeight}
-                      selectedItem={selectedItem}
-                      selectable={selectable}
-                      onItemClick={handleItemClick}
-                      onItemMove={editable ? onItemMove : undefined}
-                      onItemResize={editable ? onItemResize : undefined}
-                      getTimeFromPosition={getTimeFromPosition}
-                      getGroupFromPosition={getGroupFromPosition}
-                      timelineWidth={timelineWidth}
-                      locale={locale}
-                      itemRenderer={itemRenderer}
-                    />
-                  ))}
+                  {groups.map((group, index) => {
+                    const laneAssignment = groupLaneAssignments.get(group.id);
+                    return (
+                      <TimelineGroup
+                        key={group.id}
+                        group={group}
+                        categories={categories}
+                        items={groupedItems.get(group.id) || []}
+                        timeStart={timeStart}
+                        timeEnd={timeEnd}
+                        height={groupHeights[index]}
+                        top={cumulativeHeights[index]}
+                        laneHeight={laneHeight}
+                        itemLanes={laneAssignment?.itemLanes || new Map()}
+                        selectedItem={selectedItem}
+                        selectable={selectable}
+                        onItemClick={handleItemClick}
+                        onItemMove={editable ? onItemMove : undefined}
+                        onItemResize={editable ? onItemResize : undefined}
+                        getTimeFromPosition={getTimeFromPosition}
+                        getGroupFromPosition={getGroupFromPosition}
+                        timelineWidth={timelineWidth}
+                        locale={locale}
+                        itemRenderer={itemRenderer}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -749,7 +790,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                   className="relative"
                   style={{
                     width: `${groupBarWidth + timelineWidth}px`,
-                    height: `${60 + groups.length * groupHeight}px`,
+                    height: `${60 + totalGroupsHeight}px`,
                   }}
                 >
                   {/* Header inside scrollable content */}
@@ -783,7 +824,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                     style={{
                       width: `${groupBarWidth}px`,
                       top: '60px',
-                      height: `${groups.length * groupHeight}px`
+                      height: `${totalGroupsHeight}px`
                     }}
                   >
                     {groups.map((group, index) => (
@@ -791,8 +832,8 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                         key={group.id}
                         className="absolute flex items-center px-4 border-b border-r bg-muted"
                         style={{
-                          height: groupHeight,
-                          top: `${index * groupHeight}px`,
+                          height: groupHeights[index],
+                          top: `${cumulativeHeights[index]}px`,
                           width: `${groupBarWidth}px`,
                           left: 0
                         }}
@@ -808,7 +849,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                     style={{
                       left: `${groupBarWidth + (dayjs().diff(dayjs(timeStart)) / totalDuration) * timelineWidth}px`,
                       top: '60px',
-                      height: `${groups.length * groupHeight}px`,
+                      height: `${totalGroupsHeight}px`,
                       display:
                         dayjs().isAfter(dayjs(timeStart)) &&
                         dayjs().isBefore(dayjs(timeEnd))
@@ -824,31 +865,36 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                       left: `${groupBarWidth}px`,
                       top: '60px',
                       width: `${timelineWidth}px`,
-                      height: `${groups.length * groupHeight}px`,
+                      height: `${totalGroupsHeight}px`,
                     }}
                   >
-                    {groups.map((group, index) => (
-                      <TimelineGroup
-                        key={group.id}
-                        group={group}
-                        categories={categories}
-                        items={groupedItems.get(group.id) || []}
-                        timeStart={timeStart}
-                        timeEnd={timeEnd}
-                        height={groupHeight}
-                        top={index * groupHeight}
-                        selectedItem={selectedItem}
-                        selectable={selectable}
-                        onItemClick={handleItemClick}
-                        onItemMove={editable ? onItemMove : undefined}
-                        onItemResize={editable ? onItemResize : undefined}
-                        getTimeFromPosition={getTimeFromPosition}
-                        getGroupFromPosition={getGroupFromPosition}
-                        timelineWidth={timelineWidth}
-                        locale={locale}
-                        itemRenderer={itemRenderer}
-                      />
-                    ))}
+                    {groups.map((group, index) => {
+                      const laneAssignment = groupLaneAssignments.get(group.id);
+                      return (
+                        <TimelineGroup
+                          key={group.id}
+                          group={group}
+                          categories={categories}
+                          items={groupedItems.get(group.id) || []}
+                          timeStart={timeStart}
+                          timeEnd={timeEnd}
+                          height={groupHeights[index]}
+                          top={cumulativeHeights[index]}
+                          laneHeight={laneHeight}
+                          itemLanes={laneAssignment?.itemLanes || new Map()}
+                          selectedItem={selectedItem}
+                          selectable={selectable}
+                          onItemClick={handleItemClick}
+                          onItemMove={editable ? onItemMove : undefined}
+                          onItemResize={editable ? onItemResize : undefined}
+                          getTimeFromPosition={getTimeFromPosition}
+                          getGroupFromPosition={getGroupFromPosition}
+                          timelineWidth={timelineWidth}
+                          locale={locale}
+                          itemRenderer={itemRenderer}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               </div>

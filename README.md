@@ -16,6 +16,7 @@ A modern, feature-rich timeline/calendar component for React applications. Built
 - 🎭 Custom icons with tooltips
 - 📐 Resize items by dragging edges
 - 📏 Variable row height (compact to spacious)
+- 🔄 Automatic item stacking for overlapping items
 - ⌨️ Keyboard accessible
 - 🎬 Smooth animations
 
