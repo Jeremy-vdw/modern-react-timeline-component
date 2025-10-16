@@ -9,6 +9,7 @@ export type {
   TimelineRef,
   ItemRendererProps,
   ControlsRendererProps,
+  GroupHeaderRendererProps,
   ItemContext,
   ItemProps,
   ResizeProps,

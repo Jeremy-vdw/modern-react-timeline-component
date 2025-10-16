@@ -109,6 +109,11 @@ export interface ControlsRendererProps {
   };
 }
 
+export interface GroupHeaderRendererProps {
+  width: number;
+  height: number;
+}
+
 interface TimelineProps {
   groups: TimelineGroupData[];
   categories: Category[];
@@ -127,6 +132,7 @@ interface TimelineProps {
   rowHeight?: number;
   selectedItemId?: string | null;
   groupRenderer?: (props: { group: TimelineGroupData }) => React.ReactNode;
+  groupHeaderRenderer?: (props: GroupHeaderRendererProps) => React.ReactNode;
   itemRenderer?: (props: ItemRendererProps) => React.ReactNode;
   controlsRenderer?: (props: ControlsRendererProps) => React.ReactNode;
   onItemClick?: (item: TimelineItem) => void;
@@ -161,6 +167,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   rowHeight = 60,
   selectedItemId = null,
   groupRenderer,
+  groupHeaderRenderer,
   itemRenderer,
   controlsRenderer,
   onItemClick,
@@ -566,8 +573,17 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
     </span>
   );
 
-  // Use custom group renderer or fallback to default
+  // Default group header renderer
+  const defaultGroupHeaderRenderer = ({ width, height }: GroupHeaderRendererProps) => (
+    <div
+      className="bg-muted border-r flex-shrink-0"
+      style={{ width: `${width}px`, height: `${height}px` }}
+    />
+  );
+
+  // Use custom renderers or fallback to defaults
   const renderGroup = groupRenderer || defaultGroupRenderer;
+  const renderGroupHeader = groupHeaderRenderer || defaultGroupHeaderRenderer;
 
   // Default controls renderer
   const defaultControlsRenderer = ({ controls, state }: ControlsRendererProps) => (
@@ -655,7 +671,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
             {/* Sticky Header */}
             <div className="flex border-b sticky top-0 z-40 bg-background flex-shrink-0">
               {/* Fixed Header Left (Group Labels Space) */}
-              <div className="bg-muted border-r flex-shrink-0" style={{ width: `${groupBarWidth}px`, height: '60px' }} />
+              {renderGroupHeader({ width: groupBarWidth, height: 60 })}
 
               {/* Scrollable Header Right (Time Axis) */}
               <div
@@ -813,10 +829,9 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                   </div>
 
                   {/* Sticky header space for group labels */}
-                  <div
-                    className="sticky top-0 left-0 bg-muted border-r border-b z-30"
-                    style={{ width: `${groupBarWidth}px`, height: '60px' }}
-                  />
+                  <div className="sticky top-0 left-0 border-b z-30">
+                    {renderGroupHeader({ width: groupBarWidth, height: 60 })}
+                  </div>
 
                   {/* Sticky Group Labels - stays visible during horizontal scroll */}
                   <div
