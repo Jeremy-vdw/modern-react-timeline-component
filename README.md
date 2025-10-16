@@ -15,6 +15,8 @@ A modern, feature-rich timeline/calendar component for React applications. Built
 - 📊 Category-based styling
 - 🎭 Custom icons with tooltips
 - 📐 Resize items by dragging edges
+- 📏 Variable row height (compact to spacious)
+- 🔄 Automatic item stacking for overlapping items
 - ⌨️ Keyboard accessible
 - 🎬 Smooth animations
 
@@ -134,8 +136,10 @@ function App() {
 | `showLegend` | `boolean` | `true` | Show category legend |
 | `showControls` | `boolean` | `true` | Show zoom/navigation controls |
 | `groupBarWidth` | `number` | `192` | Width of the group labels column (px) |
+| `rowHeight` | `number` | `60` | Height of each timeline row/group (px) |
 | `selectedItemId` | `string \| null` | `null` | ID of currently selected item |
 | `groupRenderer` | `function` | - | Custom group label renderer |
+| `groupHeaderRenderer` | `function` | - | Custom group header renderer |
 | `itemRenderer` | `function` | - | Custom item renderer |
 | `controlsRenderer` | `function` | - | Custom controls renderer |
 | `onItemClick` | `function` | - | Called when item is clicked |
@@ -286,6 +290,44 @@ function App() {
   );
 }
 ```
+
+### Custom Group Header Renderer
+
+Customize the header area above the group labels (top-left corner of the timeline):
+
+```tsx
+import { Users } from 'lucide-react';
+
+const customGroupHeaderRenderer = ({ width, height }) => {
+  return (
+    <div
+      className="bg-gradient-to-br from-primary/10 to-primary/5 border-r flex items-center justify-center"
+      style={{ width: `${width}px`, height: `${height}px` }}
+    >
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-primary" />
+          <span className="font-semibold text-sm">Teams</span>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {groups.length} teams
+        </span>
+      </div>
+    </div>
+  );
+};
+
+<Timeline
+  groupHeaderRenderer={customGroupHeaderRenderer}
+  // ... other props
+/>
+```
+
+**Use cases:**
+- Display a logo or branding
+- Show summary information (e.g., total groups count)
+- Add custom styling to match your design system
+- Create a title for the groups section
 
 ### Event Handlers
 

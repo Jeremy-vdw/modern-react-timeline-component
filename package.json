@@ -1,6 +1,6 @@
 {
   "name": "modern-react-timeline-component",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A modern, interactive timeline component for React with drag-and-drop, zoom, and customizable rendering",
   "type": "module",
   "main": "./dist/index.cjs",

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, memo } from 'react';
 import { TimelineItem, Category, ItemRendererProps, ItemContext, ItemProps, ResizeProps } from './Timeline';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -11,6 +11,7 @@ interface TimelineItemProps {
   categories: Category[];
   position: { left: string; width: string };
   height: number;
+  lane: number;
   isSelected: boolean;
   selectable?: boolean;
   onClick: () => void;
@@ -24,11 +25,12 @@ interface TimelineItemProps {
   itemRenderer?: (props: ItemRendererProps) => React.ReactNode;
 }
 
-export function TimelineItemComponent({
+const TimelineItemComponentBase = ({
   item,
   categories,
   position,
   height,
+  lane,
   isSelected,
   selectable = true,
   onClick,
@@ -38,7 +40,7 @@ export function TimelineItemComponent({
   getGroupFromPosition,
   locale = 'en',
   itemRenderer,
-}: TimelineItemProps) {
+}: TimelineItemProps) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
@@ -190,21 +192,26 @@ export function TimelineItemComponent({
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   const itemClasses = `
-    absolute rounded-md shadow-sm border transition-all duration-200 group
+    absolute rounded-md shadow-sm border group
     ${selectable ? 'cursor-pointer' : 'cursor-default'}
-    ${isSelected 
-      ? 'ring-2 ring-primary ring-offset-1 shadow-md z-20' 
-      : (selectable ? 'hover:shadow-md hover:scale-105 z-10' : 'z-10')
+    ${isSelected
+      ? 'ring-2 ring-primary ring-offset-1 shadow-md z-20'
+      : (selectable ? 'hover:shadow-md z-10' : 'z-10')
     }
     ${isDragging ? 'opacity-80 scale-105 z-30' : ''}
   `;
+
+  // Calculate vertical position based on lane (used by both default and custom renderers)
+  const verticalPadding = 6;
+  const itemHeight = height - 12;
+  const topPosition = lane * height + verticalPadding;
 
   // If custom itemRenderer is provided, use it
   if (itemRenderer) {
     const itemContext: ItemContext = {
       title: item.title,
       dimensions: {
-        height: height - 12,
+        height: itemHeight,
         width: position.width,
       },
       useResizeHandle: Boolean(onResize && isSelected),
@@ -217,8 +224,8 @@ export function TimelineItemComponent({
       style: {
         position: 'absolute',
         ...position,
-        height: `${height - 12}px`,
-        top: '6px',
+        height: `${itemHeight}px`,
+        top: `${topPosition}px`,
         minWidth: '2px',
         backgroundColor: categoryStyle.backgroundColor,
         color: categoryStyle.color,
@@ -276,8 +283,8 @@ export function TimelineItemComponent({
       className={itemClasses}
       style={{
         ...position,
-        height: `${height - 12}px`,
-        top: '6px',
+        height: `${itemHeight}px`,
+        top: `${topPosition}px`,
         minWidth: '2px',
         backgroundColor: categoryStyle.backgroundColor,
         color: categoryStyle.color,
@@ -352,4 +359,26 @@ export function TimelineItemComponent({
       </div>
     </div>
   );
-}
+};
+
+// Memoize the component to prevent unnecessary re-renders
+export const TimelineItemComponent = memo(TimelineItemComponentBase, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  // Only re-render if these specific props change
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.title === nextProps.item.title &&
+    prevProps.item.start === nextProps.item.start &&
+    prevProps.item.end === nextProps.item.end &&
+    prevProps.item.category === nextProps.item.category &&
+    prevProps.item.icon === nextProps.item.icon &&
+    prevProps.item.show_duration === nextProps.item.show_duration &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.position.left === nextProps.position.left &&
+    prevProps.position.width === nextProps.position.width &&
+    prevProps.height === nextProps.height &&
+    prevProps.lane === nextProps.lane &&
+    prevProps.selectable === nextProps.selectable &&
+    prevProps.itemRenderer === nextProps.itemRenderer
+  );
+});
