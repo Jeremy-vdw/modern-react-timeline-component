@@ -5,6 +5,7 @@ import React, {
   useEffect,
   forwardRef,
   useImperativeHandle,
+  useMemo,
 } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
@@ -509,6 +510,16 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
     });
   }, [groups, groupHeight, stickyHeader]);
 
+  // Memoize grouped items to prevent filtering on every render
+  // This creates a Map of groupId -> items[] for O(1) lookup
+  const groupedItems = useMemo(() => {
+    const grouped = new Map<string, TimelineItem[]>();
+    groups.forEach(group => {
+      grouped.set(group.id, items.filter(item => item.group === group.id));
+    });
+    return grouped;
+  }, [items, groups]);
+
   // Expose the scrollToGroup function to parent components
   useImperativeHandle(ref, () => ({
     scrollToGroup
@@ -694,9 +705,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                       key={group.id}
                       group={group}
                       categories={categories}
-                      items={items.filter(
-                        (item) => item.group === group.id,
-                      )}
+                      items={groupedItems.get(group.id) || []}
                       timeStart={timeStart}
                       timeEnd={timeEnd}
                       height={groupHeight}
@@ -825,9 +834,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                       key={group.id}
                       group={group}
                       categories={categories}
-                      items={items.filter(
-                        (item) => item.group === group.id,
-                      )}
+                      items={groupedItems.get(group.id) || []}
                       timeStart={timeStart}
                       timeEnd={timeEnd}
                       height={groupHeight}

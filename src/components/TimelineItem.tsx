@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, memo } from 'react';
 import { TimelineItem, Category, ItemRendererProps, ItemContext, ItemProps, ResizeProps } from './Timeline';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -24,7 +24,7 @@ interface TimelineItemProps {
   itemRenderer?: (props: ItemRendererProps) => React.ReactNode;
 }
 
-export function TimelineItemComponent({
+const TimelineItemComponentBase = ({
   item,
   categories,
   position,
@@ -38,7 +38,7 @@ export function TimelineItemComponent({
   getGroupFromPosition,
   locale = 'en',
   itemRenderer,
-}: TimelineItemProps) {
+}: TimelineItemProps) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
@@ -352,4 +352,24 @@ export function TimelineItemComponent({
       </div>
     </div>
   );
-}
+};
+
+// Memoize the component to prevent unnecessary re-renders
+export const TimelineItemComponent = memo(TimelineItemComponentBase, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  // Only re-render if these specific props change
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.title === nextProps.item.title &&
+    prevProps.item.start === nextProps.item.start &&
+    prevProps.item.end === nextProps.item.end &&
+    prevProps.item.category === nextProps.item.category &&
+    prevProps.item.icon === nextProps.item.icon &&
+    prevProps.item.show_duration === nextProps.item.show_duration &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.position.left === nextProps.position.left &&
+    prevProps.position.width === nextProps.position.width &&
+    prevProps.height === nextProps.height &&
+    prevProps.selectable === nextProps.selectable
+  );
+});

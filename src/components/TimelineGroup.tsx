@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { TimelineItem, TimelineGroupData, Category, ItemRendererProps } from './Timeline';
 import { TimelineItemComponent } from './TimelineItem';
 import dayjs from 'dayjs';
@@ -23,7 +23,7 @@ interface TimelineGroupProps {
   itemRenderer?: (props: ItemRendererProps) => React.ReactNode;
 }
 
-export function TimelineGroup({
+const TimelineGroupComponent = ({
   categories,
   items,
   timeStart,
@@ -40,7 +40,7 @@ export function TimelineGroup({
   timelineWidth,
   locale = 'en',
   itemRenderer,
-}: TimelineGroupProps) {
+}: TimelineGroupProps) => {
   const totalDuration = dayjs(timeEnd).diff(dayjs(timeStart));
 
   const getItemPosition = (item: TimelineItem) => {
@@ -135,4 +135,22 @@ export function TimelineGroup({
       })}
     </div>
   );
-}
+};
+
+// Memoize the component to prevent unnecessary re-renders
+export const TimelineGroup = memo(TimelineGroupComponent, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  // Only re-render if these specific props change
+  return (
+    prevProps.group.id === nextProps.group.id &&
+    prevProps.items === nextProps.items &&
+    prevProps.timeStart === nextProps.timeStart &&
+    prevProps.timeEnd === nextProps.timeEnd &&
+    prevProps.selectedItem === nextProps.selectedItem &&
+    prevProps.height === nextProps.height &&
+    prevProps.top === nextProps.top &&
+    prevProps.timelineWidth === nextProps.timelineWidth &&
+    prevProps.selectable === nextProps.selectable &&
+    prevProps.locale === nextProps.locale
+  );
+});
