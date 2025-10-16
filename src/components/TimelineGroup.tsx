@@ -165,6 +165,7 @@ export const TimelineGroup = memo(TimelineGroupComponent, (prevProps, nextProps)
     prevProps.top === nextProps.top &&
     prevProps.timelineWidth === nextProps.timelineWidth &&
     prevProps.selectable === nextProps.selectable &&
-    prevProps.locale === nextProps.locale
+    prevProps.locale === nextProps.locale &&
+    prevProps.itemRenderer === nextProps.itemRenderer
   );
 });

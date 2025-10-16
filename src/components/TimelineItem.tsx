@@ -201,12 +201,17 @@ const TimelineItemComponentBase = ({
     ${isDragging ? 'opacity-80 scale-105 z-30' : ''}
   `;
 
+  // Calculate vertical position based on lane (used by both default and custom renderers)
+  const verticalPadding = 6;
+  const itemHeight = height - 12;
+  const topPosition = lane * height + verticalPadding;
+
   // If custom itemRenderer is provided, use it
   if (itemRenderer) {
     const itemContext: ItemContext = {
       title: item.title,
       dimensions: {
-        height: height - 12,
+        height: itemHeight,
         width: position.width,
       },
       useResizeHandle: Boolean(onResize && isSelected),
@@ -219,8 +224,8 @@ const TimelineItemComponentBase = ({
       style: {
         position: 'absolute',
         ...position,
-        height: `${height - 12}px`,
-        top: '6px',
+        height: `${itemHeight}px`,
+        top: `${topPosition}px`,
         minWidth: '2px',
         backgroundColor: categoryStyle.backgroundColor,
         color: categoryStyle.color,
@@ -270,11 +275,6 @@ const TimelineItemComponentBase = ({
       </div>
     );
   }
-
-  // Calculate vertical position based on lane
-  const verticalPadding = 6;
-  const itemHeight = height - 12;
-  const topPosition = lane * height + verticalPadding;
 
   // Default rendering
   return (
@@ -378,6 +378,7 @@ export const TimelineItemComponent = memo(TimelineItemComponentBase, (prevProps,
     prevProps.position.width === nextProps.position.width &&
     prevProps.height === nextProps.height &&
     prevProps.lane === nextProps.lane &&
-    prevProps.selectable === nextProps.selectable
+    prevProps.selectable === nextProps.selectable &&
+    prevProps.itemRenderer === nextProps.itemRenderer
   );
 });
