@@ -7,6 +7,7 @@ import React, {
   useImperativeHandle,
   useMemo,
 } from "react";
+
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import {
@@ -390,13 +391,8 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
 
   // Sync scroll between header and content
   const handleContentScroll = useCallback(() => {
-    if (contentScrollRef.current && headerScrollRef.current) {
-      // Only sync horizontal scroll for sticky header mode
-      // In non-sticky mode, the header scrolls naturally with the content
-      if (stickyHeader) {
-        headerScrollRef.current.scrollLeft =
-          contentScrollRef.current.scrollLeft;
-      }
+    if (contentScrollRef.current && headerScrollRef.current && stickyHeader) {
+      headerScrollRef.current.scrollLeft = contentScrollRef.current.scrollLeft;
     }
   }, [stickyHeader]);
 
@@ -406,13 +402,13 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
       // Calculate scroll position to center the current week
       const nowRatio = dayjs().diff(dayjs(timeStart)) / totalDuration;
       const containerWidth = contentScrollRef.current.clientWidth || 800;
-      
+
       // Position so current time is roughly in center of visible area
       const scrollPosition = (nowRatio * timelineWidth) - (containerWidth / 2);
       const maxScroll = timelineWidth - containerWidth;
-      
+
       const clampedScroll = Math.max(0, Math.min(maxScroll, scrollPosition));
-      
+
       contentScrollRef.current.scrollLeft = clampedScroll;
       headerScrollRef.current.scrollLeft = clampedScroll;
     }
@@ -638,25 +634,25 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
               </div>
             </div>
 
-            {/* Single Scrollable Content Area */}
+            {/* Single Scrollable Content Area with Virtuoso */}
             <div
               ref={contentScrollRef}
               className="flex-1 overflow-auto relative"
               onScroll={handleContentScroll}
               style={{
                 willChange: 'scroll-position',
-                maxHeight: showLegend ? `calc(100% - 60px)` : '100%' // Reserve space for footer if legend is shown
+                maxHeight: showLegend ? `calc(100% - 60px)` : '100%'
               }}
             >
               <div
                 className="relative"
                 style={{
-                  width: `${groupBarWidth + timelineWidth}px`, // group bar width plus timeline width
-                  height: `${groups.length * groupHeight}px`,
+                  width: `${groupBarWidth + timelineWidth}px`,
+                  minHeight: '100%',
                 }}
               >
                 {/* Sticky Group Labels - stays visible during horizontal scroll */}
-                <div 
+                <div
                   className="sticky left-0 top-0 bg-muted border-r z-50"
                   style={{ width: `${groupBarWidth}px`, height: `${groups.length * groupHeight}px` }}
                 >
@@ -664,7 +660,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                     <div
                       key={group.id}
                       className="absolute flex items-center px-4 border-b border-r bg-muted"
-                      style={{ 
+                      style={{
                         height: groupHeight,
                         top: `${index * groupHeight}px`,
                         width: `${groupBarWidth}px`,
@@ -737,7 +733,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
           </>
         ) : (
           <>
-            {/* Non-sticky version: Everything scrolls together in one container */}
+            {/* Non-sticky version: Everything scrolls together */}
             <div className="flex-1 flex flex-col overflow-hidden">
               <div
                 ref={contentScrollRef}
@@ -747,119 +743,119 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                   willChange: 'scroll-position'
                 }}
               >
-              <div
-                className="relative"
-                style={{
-                  width: `${groupBarWidth + timelineWidth}px`, // group bar width plus timeline width
-                  height: `${60 + groups.length * groupHeight}px`, // Include header height
-                }}
-              >
-                {/* Header inside scrollable content */}
-                <div 
-                  ref={headerScrollRef}
-                  className="absolute top-0 border-b bg-background z-30"
-                  style={{ 
-                    left: `${groupBarWidth}px`,
-                    height: '60px', 
-                    width: `${timelineWidth}px` 
-                  }}
-                >
-                  <TimelineHeader
-                    timeStart={timeStart}
-                    timeEnd={timeEnd}
-                    width={timelineWidth}
-                    zoom={zoom}
-                    locale={locale}
-                  />
-                </div>
-
-                {/* Sticky header space for group labels */}
-                <div 
-                  className="sticky top-0 left-0 bg-muted border-r border-b z-30"
-                  style={{ width: `${groupBarWidth}px`, height: '60px' }}
-                />
-
-                {/* Sticky Group Labels - stays visible during horizontal scroll */}
-                <div 
-                  className="sticky left-0 bg-muted border-r z-50"
-                  style={{ 
-                    width: `${groupBarWidth}px`,
-                    top: '60px',
-                    height: `${groups.length * groupHeight}px` 
-                  }}
-                >
-                  {groups.map((group, index) => (
-                    <div
-                      key={group.id}
-                      className="absolute flex items-center px-4 border-b border-r bg-muted"
-                      style={{ 
-                        height: groupHeight,
-                        top: `${index * groupHeight}px`,
-                        width: `${groupBarWidth}px`,
-                        left: 0
-                      }}
-                    >
-                      {renderGroup({ group })}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Current time indicator for content area */}
                 <div
-                  className="absolute w-0.5 bg-destructive z-40 pointer-events-none"
+                  className="relative"
                   style={{
-                    left: `${groupBarWidth + (dayjs().diff(dayjs(timeStart)) / totalDuration) * timelineWidth}px`,
-                    top: '60px',
-                    height: `${groups.length * groupHeight}px`,
-                    display:
-                      dayjs().isAfter(dayjs(timeStart)) &&
-                      dayjs().isBefore(dayjs(timeEnd))
-                        ? "block"
-                        : "none",
-                  }}
-                />
-
-                {/* Timeline Content Area - offset by header height and group label width */}
-                <div
-                  className="absolute"
-                  style={{
-                    left: `${groupBarWidth}px`,
-                    top: '60px',
-                    width: `${timelineWidth}px`,
-                    height: `${groups.length * groupHeight}px`,
+                    width: `${groupBarWidth + timelineWidth}px`,
+                    height: `${60 + groups.length * groupHeight}px`,
                   }}
                 >
-                  {groups.map((group, index) => (
-                    <TimelineGroup
-                      key={group.id}
-                      group={group}
-                      categories={categories}
-                      items={groupedItems.get(group.id) || []}
+                  {/* Header inside scrollable content */}
+                  <div
+                    ref={headerScrollRef}
+                    className="absolute top-0 border-b bg-background z-30"
+                    style={{
+                      left: `${groupBarWidth}px`,
+                      height: '60px',
+                      width: `${timelineWidth}px`
+                    }}
+                  >
+                    <TimelineHeader
                       timeStart={timeStart}
                       timeEnd={timeEnd}
-                      height={groupHeight}
-                      top={index * groupHeight}
-                      selectedItem={selectedItem}
-                      selectable={selectable}
-                      onItemClick={handleItemClick}
-                      onItemMove={editable ? onItemMove : undefined}
-                      onItemResize={editable ? onItemResize : undefined}
-                      getTimeFromPosition={getTimeFromPosition}
-                      getGroupFromPosition={getGroupFromPosition}
-                      timelineWidth={timelineWidth}
+                      width={timelineWidth}
+                      zoom={zoom}
                       locale={locale}
-                      itemRenderer={itemRenderer}
                     />
-                  ))}
+                  </div>
+
+                  {/* Sticky header space for group labels */}
+                  <div
+                    className="sticky top-0 left-0 bg-muted border-r border-b z-30"
+                    style={{ width: `${groupBarWidth}px`, height: '60px' }}
+                  />
+
+                  {/* Sticky Group Labels - stays visible during horizontal scroll */}
+                  <div
+                    className="sticky left-0 bg-muted border-r z-50"
+                    style={{
+                      width: `${groupBarWidth}px`,
+                      top: '60px',
+                      height: `${groups.length * groupHeight}px`
+                    }}
+                  >
+                    {groups.map((group, index) => (
+                      <div
+                        key={group.id}
+                        className="absolute flex items-center px-4 border-b border-r bg-muted"
+                        style={{
+                          height: groupHeight,
+                          top: `${index * groupHeight}px`,
+                          width: `${groupBarWidth}px`,
+                          left: 0
+                        }}
+                      >
+                        {renderGroup({ group })}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Current time indicator for content area */}
+                  <div
+                    className="absolute w-0.5 bg-destructive z-40 pointer-events-none"
+                    style={{
+                      left: `${groupBarWidth + (dayjs().diff(dayjs(timeStart)) / totalDuration) * timelineWidth}px`,
+                      top: '60px',
+                      height: `${groups.length * groupHeight}px`,
+                      display:
+                        dayjs().isAfter(dayjs(timeStart)) &&
+                        dayjs().isBefore(dayjs(timeEnd))
+                          ? "block"
+                          : "none",
+                    }}
+                  />
+
+                  {/* Timeline Content Area - offset by header height and group label width */}
+                  <div
+                    className="absolute"
+                    style={{
+                      left: `${groupBarWidth}px`,
+                      top: '60px',
+                      width: `${timelineWidth}px`,
+                      height: `${groups.length * groupHeight}px`,
+                    }}
+                  >
+                    {groups.map((group, index) => (
+                      <TimelineGroup
+                        key={group.id}
+                        group={group}
+                        categories={categories}
+                        items={groupedItems.get(group.id) || []}
+                        timeStart={timeStart}
+                        timeEnd={timeEnd}
+                        height={groupHeight}
+                        top={index * groupHeight}
+                        selectedItem={selectedItem}
+                        selectable={selectable}
+                        onItemClick={handleItemClick}
+                        onItemMove={editable ? onItemMove : undefined}
+                        onItemResize={editable ? onItemResize : undefined}
+                        getTimeFromPosition={getTimeFromPosition}
+                        getGroupFromPosition={getGroupFromPosition}
+                        timelineWidth={timelineWidth}
+                        locale={locale}
+                        itemRenderer={itemRenderer}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
-              </div>
-              
+
               {/* Timeline Legend Footer */}
               {showLegend && (
                 <div className="flex-shrink-0">
-                  <TimelineLegend 
-                    categories={categories} 
+                  <TimelineLegend
+                    categories={categories}
                   />
                 </div>
               )}

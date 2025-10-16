@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { TimelineItem, TimelineGroupData, Category, ItemRendererProps } from './Timeline';
 import { TimelineItemComponent } from './TimelineItem';
 import dayjs from 'dayjs';
@@ -48,60 +48,67 @@ const TimelineGroupComponent = ({
     const itemEndDay = dayjs(item.end);
     const timeStartDay = dayjs(timeStart);
     const timeEndDay = dayjs(timeEnd);
-    
+
     const itemStart = Math.max(itemStartDay.valueOf(), timeStartDay.valueOf());
     const itemEnd = Math.min(itemEndDay.valueOf(), timeEndDay.valueOf());
-    
+
     const leftRatio = (itemStart - timeStartDay.valueOf()) / totalDuration;
     const widthRatio = (itemEnd - itemStart) / totalDuration;
-    
+
     const left = leftRatio * timelineWidth;
     const width = Math.max(widthRatio * timelineWidth, 2); // Minimum 2px width
-    
+
     return { left: `${left}px`, width: `${width}px` };
   };
+
+  // Memoize grid lines to prevent recalculation on every render
+  // Optimized: Only render lines that are at least 2px apart for better performance
+  const gridLines = useMemo(() => {
+    const lines = [];
+    const timeStartDay = dayjs(timeStart);
+    const timeEndDay = dayjs(timeEnd);
+
+    // Start from the beginning of the first day
+    let currentDay = timeStartDay.startOf('day');
+    let lastRenderedPosition = -10; // Track last rendered position to avoid overlapping lines
+
+    // Create a line for each day boundary
+    while (currentDay.isBefore(timeEndDay) || currentDay.isSame(timeEndDay, 'day')) {
+      const dayRatio = (currentDay.valueOf() - timeStartDay.valueOf()) / totalDuration;
+      const leftPosition = dayRatio * timelineWidth;
+
+      // Only render if position is within timeline and at least 2px from last line
+      if (leftPosition >= 0 && leftPosition <= timelineWidth && leftPosition - lastRenderedPosition >= 2) {
+        lines.push(
+          <div
+            key={currentDay.format('YYYY-MM-DD')}
+            className="absolute top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-600 opacity-30"
+            style={{ left: `${leftPosition}px` }}
+          />
+        );
+        lastRenderedPosition = leftPosition;
+      }
+
+      currentDay = currentDay.add(1, 'day');
+    }
+
+    return lines;
+  }, [timeStart, timeEnd, timelineWidth, totalDuration]);
 
   return (
     <div
       className="absolute border-b border-border bg-background hover:bg-muted/20 transition-colors"
-      style={{ 
-        height: `${height}px`, 
+      style={{
+        height: `${height}px`,
         top: `${top}px`,
         width: `${timelineWidth}px`,
-        left: 0
+        left: 0,
+        contentVisibility: 'auto' as any, // CSS containment for better performance
       }}
     >
       {/* Daily grid lines */}
       <div className="absolute inset-0 z-5 pointer-events-none">
-        {(() => {
-          const lines = [];
-          const timeStartDay = dayjs(timeStart);
-          const timeEndDay = dayjs(timeEnd);
-          
-          // Start from the beginning of the first day
-          let currentDay = timeStartDay.startOf('day');
-          
-          // Create a line for each day boundary
-          while (currentDay.isBefore(timeEndDay) || currentDay.isSame(timeEndDay, 'day')) {
-            const dayRatio = (currentDay.valueOf() - timeStartDay.valueOf()) / totalDuration;
-            const leftPosition = dayRatio * timelineWidth;
-            
-            // Only show lines that are within the visible timeline
-            if (leftPosition >= 0 && leftPosition <= timelineWidth) {
-              lines.push(
-                <div
-                  key={currentDay.format('YYYY-MM-DD')}
-                  className="absolute top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-600 opacity-40"
-                  style={{ left: `${leftPosition}px` }}
-                />
-              );
-            }
-            
-            currentDay = currentDay.add(1, 'day');
-          }
-          
-          return lines;
-        })()}
+        {gridLines}
       </div>
 
       {/* Timeline Items */}
