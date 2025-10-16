@@ -630,9 +630,10 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
             {/* Single Scrollable Content Area */}
             <div
               ref={contentScrollRef}
-              className="flex-1 overflow-auto scroll-smooth relative"
+              className="flex-1 overflow-auto relative"
               onScroll={handleContentScroll}
-              style={{ 
+              style={{
+                willChange: 'scroll-position',
                 maxHeight: showLegend ? `calc(100% - 60px)` : '100%' // Reserve space for footer if legend is shown
               }}
             >
@@ -731,8 +732,11 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
             <div className="flex-1 flex flex-col overflow-hidden">
               <div
                 ref={contentScrollRef}
-                className="flex-1 overflow-auto scroll-smooth relative"
+                className="flex-1 overflow-auto relative"
                 onScroll={handleContentScroll}
+                style={{
+                  willChange: 'scroll-position'
+                }}
               >
               <div
                 className="relative"

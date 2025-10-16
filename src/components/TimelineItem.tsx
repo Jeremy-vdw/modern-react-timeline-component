@@ -190,11 +190,11 @@ export function TimelineItemComponent({
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   const itemClasses = `
-    absolute rounded-md shadow-sm border transition-all duration-200 group
+    absolute rounded-md shadow-sm border group
     ${selectable ? 'cursor-pointer' : 'cursor-default'}
-    ${isSelected 
-      ? 'ring-2 ring-primary ring-offset-1 shadow-md z-20' 
-      : (selectable ? 'hover:shadow-md hover:scale-105 z-10' : 'z-10')
+    ${isSelected
+      ? 'ring-2 ring-primary ring-offset-1 shadow-md z-20'
+      : (selectable ? 'hover:shadow-md z-10' : 'z-10')
     }
     ${isDragging ? 'opacity-80 scale-105 z-30' : ''}
   `;
