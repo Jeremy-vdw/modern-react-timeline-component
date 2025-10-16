@@ -123,6 +123,7 @@ interface TimelineProps {
   showLegend?: boolean;
   showControls?: boolean;
   groupBarWidth?: number;
+  rowHeight?: number;
   selectedItemId?: string | null;
   groupRenderer?: (props: { group: TimelineGroupData }) => React.ReactNode;
   itemRenderer?: (props: ItemRendererProps) => React.ReactNode;
@@ -156,6 +157,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   showLegend = true,
   showControls = true,
   groupBarWidth = 192,
+  rowHeight = 60,
   selectedItemId = null,
   groupRenderer,
   itemRenderer,
@@ -195,7 +197,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   const [zoom, setZoom] = useState(1);
 
   const totalDuration = dayjs(timeEnd).diff(dayjs(timeStart));
-  const groupHeight = 60;
+  const groupHeight = rowHeight;
 
   // Calculate timeline content width based on total range (12 months)
   // Base width should show 1 week by default at 100% zoom

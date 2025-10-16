@@ -15,6 +15,7 @@ A modern, feature-rich timeline/calendar component for React applications. Built
 - 📊 Category-based styling
 - 🎭 Custom icons with tooltips
 - 📐 Resize items by dragging edges
+- 📏 Variable row height (compact to spacious)
 - ⌨️ Keyboard accessible
 - 🎬 Smooth animations
 
@@ -134,6 +135,7 @@ function App() {
 | `showLegend` | `boolean` | `true` | Show category legend |
 | `showControls` | `boolean` | `true` | Show zoom/navigation controls |
 | `groupBarWidth` | `number` | `192` | Width of the group labels column (px) |
+| `rowHeight` | `number` | `60` | Height of each timeline row/group (px) |
 | `selectedItemId` | `string \| null` | `null` | ID of currently selected item |
 | `groupRenderer` | `function` | - | Custom group label renderer |
 | `itemRenderer` | `function` | - | Custom item renderer |
