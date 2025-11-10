@@ -156,8 +156,8 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   locale = 'en',
   defaultTimeStart,
   defaultTimeEnd,
-  visibleTimeStart: _visibleTimeStart,
-  visibleTimeEnd: _visibleTimeEnd,
+  visibleTimeStart,
+  visibleTimeEnd,
   stickyHeader = true,
   editable = true,
   selectable = true,
@@ -192,15 +192,19 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
     defaultTimeEnd || now.add(6, "month").toDate();
 
   // Default visible range: 3 days before to 4 days after today (1 week total)
-  // Not currently used but kept for future implementation
-  // const defaultVisibleStart =
-  //   visibleTimeStart || now.subtract(3, "day").toDate();
-  // const defaultVisibleEnd =
-  //   visibleTimeEnd || now.add(4, "day").toDate();
+  // This defines what is shown at 100% zoom
+  const defaultVisibleStart =
+    visibleTimeStart || now.subtract(3, "day").toDate();
+  const defaultVisibleEnd =
+    visibleTimeEnd || now.add(4, "day").toDate();
 
   // Total scrollable range (fixed)
   const [timeStart] = useState(totalStart);
   const [timeEnd] = useState(totalEnd);
+
+  // Visible range (defines 100% zoom level)
+  const [visibleStart] = useState(defaultVisibleStart);
+  const [visibleEnd] = useState(defaultVisibleEnd);
 
   const [zoom, setZoom] = useState(1);
 
@@ -235,42 +239,49 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
     return groupHeights.reduce((sum, height) => sum + height, 0);
   }, [groupHeights]);
 
-  // Calculate timeline content width based on total range (12 months)
-  // Base width should show 1 week by default at 100% zoom
+  // Calculate timeline content width based on visible range
+  // At 100% zoom, the visible range should fit exactly in the viewport
   const containerWidth = 800; // Approximate timeline container width
-  const baseWeekWidth = containerWidth; // 1 week takes full container width
-  const totalWeeks = totalDuration / (7 * 24 * 60 * 60 * 1000); // Total weeks in 12 months
-  const baseWidth = baseWeekWidth * totalWeeks; // Scale up for total range
-  const timelineWidth = baseWidth * zoom; // Allow timeline to shrink when zooming out
+  const visibleDuration = dayjs(visibleEnd).diff(dayjs(visibleStart));
+  const baseWidth = (totalDuration / visibleDuration) * containerWidth;
+  const timelineWidth = baseWidth * zoom;
+
+  // Calculate dynamic zoom limits based on visible range
+  // Max zoom: when viewport shows 1 day
+  // Min zoom: when viewport shows 3 months
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const threeMonthsMs = 90 * oneDayMs; // Approximately 3 months
+  const maxZoom = visibleDuration / oneDayMs;
+  const minZoom = visibleDuration / threeMonthsMs;
 
   const handleZoomIn = useCallback(() => {
-    if (zoom >= 8) return; // Max zoom limit
-    
+    if (zoom >= maxZoom) return; // Dynamic max zoom limit
+
     if (contentScrollRef.current && headerScrollRef.current) {
       // Get current dimensions
       const containerWidth = contentScrollRef.current.clientWidth;
       const currentScrollLeft = contentScrollRef.current.scrollLeft;
       const currentCenter = currentScrollLeft + containerWidth / 2;
-      
+
       // Calculate the current timeline width based on current zoom
       const currentTimelineWidth = baseWidth * zoom;
-      
+
       // Calculate the time ratio at the current center point
       const centerRatio = currentCenter / currentTimelineWidth;
-      
+
       // Calculate new zoom and timeline width
-      const newZoom = zoom * 2;
+      const newZoom = Math.min(zoom * 2, maxZoom); // Clamp to maxZoom
       const newTimelineWidth = baseWidth * newZoom;
-      
+
       // Calculate new scroll position to maintain the same center time
       const newCenterPosition = centerRatio * newTimelineWidth;
       const newScrollLeft = newCenterPosition - containerWidth / 2;
       const maxScroll = Math.max(0, newTimelineWidth - containerWidth);
       const clampedScroll = Math.max(0, Math.min(maxScroll, newScrollLeft));
-      
+
       // Update zoom state
       setZoom(newZoom);
-      
+
       // Apply scroll position after the DOM updates
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -281,38 +292,38 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
         });
       });
     }
-  }, [zoom, baseWidth]);
+  }, [zoom, baseWidth, maxZoom]);
 
   const handleZoomOut = useCallback(() => {
-    if (zoom <= 0.25) return; // Min zoom limit
-    
+    if (zoom <= minZoom) return; // Dynamic min zoom limit
+
     if (contentScrollRef.current && headerScrollRef.current) {
       // Get current dimensions
       const containerWidth = contentScrollRef.current.clientWidth;
       const currentScrollLeft = contentScrollRef.current.scrollLeft;
       const currentCenter = currentScrollLeft + containerWidth / 2;
-      
+
       // Calculate the current timeline width based on current zoom
       const currentTimelineWidth = baseWidth * zoom;
-      
+
       // Calculate the time ratio at the current center point
       const centerRatio = currentCenter / currentTimelineWidth;
-      
+
       // Calculate new zoom and timeline width
-      const newZoom = zoom * 0.5;
+      const newZoom = Math.max(zoom * 0.5, minZoom); // Clamp to minZoom
       const newTimelineWidth = baseWidth * newZoom;
-      
+
       // Calculate new scroll position to maintain the same center time
       const newCenterPosition = centerRatio * newTimelineWidth;
       const newScrollLeft = newCenterPosition - containerWidth / 2;
-      
+
       // Clamp scroll position to valid range
       const maxScroll = Math.max(0, newTimelineWidth - containerWidth);
       const clampedScroll = Math.max(0, Math.min(maxScroll, newScrollLeft));
-      
+
       // Update zoom state
       setZoom(newZoom);
-      
+
       // Apply scroll position after the DOM updates
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -323,7 +334,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
         });
       });
     }
-  }, [zoom, baseWidth]);
+  }, [zoom, baseWidth, minZoom]);
 
   // Single click: just scroll to today (keep current zoom)
   const handleScrollToToday = useCallback(() => {
@@ -434,15 +445,18 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
     }
   }, [stickyHeader]);
 
-  // Auto-scroll to show the current week on mount
+  // Auto-scroll to show the visible range on mount
   useEffect(() => {
     if (contentScrollRef.current && headerScrollRef.current) {
-      // Calculate scroll position to center the current week
-      const nowRatio = dayjs().diff(dayjs(timeStart)) / totalDuration;
+      // Calculate scroll position to center the visible range
+      const visibleMidpoint = dayjs(visibleStart).add(
+        dayjs(visibleEnd).diff(dayjs(visibleStart)) / 2
+      );
+      const midpointRatio = visibleMidpoint.diff(dayjs(timeStart)) / totalDuration;
       const containerWidth = contentScrollRef.current.clientWidth || 800;
 
-      // Position so current time is roughly in center of visible area
-      const scrollPosition = (nowRatio * timelineWidth) - (containerWidth / 2);
+      // Position so visible range midpoint is roughly in center of viewport
+      const scrollPosition = (midpointRatio * timelineWidth) - (containerWidth / 2);
       const maxScroll = timelineWidth - containerWidth;
 
       const clampedScroll = Math.max(0, Math.min(maxScroll, scrollPosition));
@@ -450,7 +464,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
       contentScrollRef.current.scrollLeft = clampedScroll;
       headerScrollRef.current.scrollLeft = clampedScroll;
     }
-  }, [timelineWidth, totalDuration, timeStart]); // Update when width changes
+  }, [timelineWidth, totalDuration, timeStart, visibleStart, visibleEnd]); // Update when width or visible range changes
 
   const handleItemClick = useCallback(
     (item: TimelineItem) => {
@@ -656,8 +670,8 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
         },
         state: {
           zoom: zoom,
-          canZoomIn: zoom < 8,
-          canZoomOut: zoom > 0.25,
+          canZoomIn: zoom < maxZoom,
+          canZoomOut: zoom > minZoom,
         },
       })}
 
@@ -684,6 +698,8 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                   width={timelineWidth}
                   zoom={zoom}
                   locale={locale}
+                  visibleStart={visibleStart}
+                  visibleEnd={visibleEnd}
                 />
               </div>
             </div>
@@ -774,6 +790,9 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                         timelineWidth={timelineWidth}
                         locale={locale}
                         itemRenderer={itemRenderer}
+                        visibleStart={visibleStart}
+                        visibleEnd={visibleEnd}
+                        zoom={zoom}
                       />
                     );
                   })}
@@ -825,6 +844,8 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                       width={timelineWidth}
                       zoom={zoom}
                       locale={locale}
+                      visibleStart={visibleStart}
+                      visibleEnd={visibleEnd}
                     />
                   </div>
 
@@ -907,6 +928,9 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
                           timelineWidth={timelineWidth}
                           locale={locale}
                           itemRenderer={itemRenderer}
+                          visibleStart={visibleStart}
+                          visibleEnd={visibleEnd}
+                          zoom={zoom}
                         />
                       );
                     })}

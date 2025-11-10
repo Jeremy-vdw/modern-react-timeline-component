@@ -6,103 +6,151 @@ interface TimelineHeaderProps {
   width: number;
   zoom: number;
   locale?: string;
+  visibleStart: Date;
+  visibleEnd: Date;
 }
 
-export function TimelineHeader({ timeStart, timeEnd, width, zoom, locale = 'en' }: TimelineHeaderProps) {
+export function TimelineHeader({ timeStart, timeEnd, width, zoom, locale = 'en', visibleStart, visibleEnd }: TimelineHeaderProps) {
   const totalDuration = dayjs(timeEnd).diff(dayjs(timeStart));
-  
+
   // Create dayjs instances with the specified locale
   const createLocalizedDayjs = (date: Date | dayjs.Dayjs) => dayjs(date).locale(locale);
+
+  // Calculate what's actually visible in the viewport at current zoom
+  const baseVisibleDuration = dayjs(visibleEnd).diff(dayjs(visibleStart));
+  const actualVisibleDuration = baseVisibleDuration / zoom;
+
+  // Convert to days for easier threshold comparison
+  const visibleDays = actualVisibleDuration / (24 * 60 * 60 * 1000);
   
   // Calculate major intervals (top row) that span across minor intervals
   const getMajorIntervals = () => {
     const intervals = [];
-    
-    let intervalUnit: 'day' | 'month' | 'year';
+
+    let intervalUnit: 'day' | 'month' | 'year' | 'quarter';
     let formatString: string;
-    
-    // Proper hierarchy: top row should be one level above bottom row
-    if (zoom >= 4) {
-      // Very zoomed in (400%+) - show days (when hours are shown below)
+
+    // Determine format based on actual visible duration (not zoom percentage)
+    if (visibleDays <= 3) {
+      // Very zoomed in: < 3 days visible - show days (when hours are shown below)
       intervalUnit = 'day';
       formatString = 'ddd MMM D';
-    } else if (zoom >= 2) {
-      // 200% zoom - show months (when day descriptions are shown below)
+    } else if (visibleDays <= 60) {
+      // Zoomed in to normal: 3-60 days visible - show months (when days are shown below)
       intervalUnit = 'month';
       formatString = 'MMMM YYYY';
-    } else if (zoom >= 0.5) {
-      // Default zoom - show months (when days are shown below)
-      intervalUnit = 'month';
-      formatString = 'MMMM YYYY';
+    } else if (visibleDays <= 180) {
+      // Zoomed out: 60-180 days visible - show quarters (when months are shown below)
+      intervalUnit = 'quarter';
+      formatString = ''; // Custom formatting for quarters
     } else {
-      // Zoomed out - show years (when months/weeks are shown below)
+      // Very zoomed out: > 180 days visible - show years (when months are shown below)
       intervalUnit = 'year';
       formatString = 'YYYY';
     }
-    
+
     const timeStartDay = createLocalizedDayjs(timeStart);
     const timeEndDay = createLocalizedDayjs(timeEnd);
-    let current = timeStartDay.startOf(intervalUnit);
-    
-    // Find the first interval boundary before or at timeStart
-    while (current.isAfter(timeStartDay)) {
-      current = current.subtract(1, intervalUnit);
-    }
-    
-    while (current.isBefore(timeEndDay)) {
-      const intervalStart = current;
-      const intervalEnd = current.add(1, intervalUnit);
-      
-      // Calculate position and width
-      const startPosition = Math.max(0, (intervalStart.diff(timeStartDay) / totalDuration) * 100);
-      const endPosition = Math.min(100, (intervalEnd.diff(timeStartDay) / totalDuration) * 100);
-      const widthPercent = endPosition - startPosition;
-      
-      // Only add if the interval is visible
-      if (widthPercent > 0 && startPosition < 100) {
-        intervals.push({
-          date: intervalStart.toDate(),
-          startPosition,
-          widthPercent,
-          label: intervalStart.format(formatString)
-        });
+
+    // Special handling for quarters
+    if (intervalUnit === 'quarter') {
+      // Calculate the quarter start month for a given date
+      const getQuarterStartMonth = (date: dayjs.Dayjs) => {
+        const month = date.month(); // 0-11
+        return Math.floor(month / 3) * 3; // 0, 3, 6, or 9
+      };
+
+      // Start from the beginning of the quarter containing timeStart
+      const startQuarterMonth = getQuarterStartMonth(timeStartDay);
+      let current = timeStartDay.year(timeStartDay.year()).month(startQuarterMonth).startOf('month');
+
+      while (current.isBefore(timeEndDay)) {
+        const intervalStart = current;
+        const intervalEnd = current.add(3, 'month'); // Quarter = 3 months
+
+        // Calculate position and width
+        const startPosition = Math.max(0, (intervalStart.diff(timeStartDay) / totalDuration) * 100);
+        const endPosition = Math.min(100, (intervalEnd.diff(timeStartDay) / totalDuration) * 100);
+        const widthPercent = endPosition - startPosition;
+
+        // Only add if the interval is visible
+        if (widthPercent > 0 && startPosition < 100) {
+          const quarter = Math.floor(intervalStart.month() / 3) + 1;
+          const year = intervalStart.year();
+          intervals.push({
+            date: intervalStart.toDate(),
+            startPosition,
+            widthPercent,
+            label: `Q${quarter} ${year}`
+          });
+        }
+
+        current = intervalEnd;
       }
-      
-      current = intervalEnd;
+    } else {
+      // Standard handling for day, month, year
+      let current = timeStartDay.startOf(intervalUnit);
+
+      // Find the first interval boundary before or at timeStart
+      while (current.isAfter(timeStartDay)) {
+        current = current.subtract(1, intervalUnit);
+      }
+
+      while (current.isBefore(timeEndDay)) {
+        const intervalStart = current;
+        const intervalEnd = current.add(1, intervalUnit);
+
+        // Calculate position and width
+        const startPosition = Math.max(0, (intervalStart.diff(timeStartDay) / totalDuration) * 100);
+        const endPosition = Math.min(100, (intervalEnd.diff(timeStartDay) / totalDuration) * 100);
+        const widthPercent = endPosition - startPosition;
+
+        // Only add if the interval is visible
+        if (widthPercent > 0 && startPosition < 100) {
+          intervals.push({
+            date: intervalStart.toDate(),
+            startPosition,
+            widthPercent,
+            label: intervalStart.format(formatString)
+          });
+        }
+
+        current = intervalEnd;
+      }
     }
-    
+
     return intervals;
   };
 
   // Calculate minor intervals (bottom row)
   const getMinorIntervals = () => {
     const intervals = [];
-    
+
     let intervalUnit: 'hour' | 'day' | 'month';
     let intervalAmount: number;
     let formatString: string;
-    
-    // Bottom row intervals that match the hierarchy
-    if (zoom >= 4) {
-      // Very zoomed in (400%+) - show hours (with days above)
+
+    // Use 24-hour format for Dutch and other European locales
+    const use24Hour = ['nl', 'de', 'fr', 'es', 'pt', 'ru'].includes(locale);
+
+    // Determine format based on actual visible duration (not zoom percentage)
+    if (visibleDays <= 3) {
+      // Very zoomed in: < 3 days visible - show hours (with days above)
       intervalUnit = 'hour';
-      intervalAmount = 1; // 1-hour blocks at 400%+
-      // Use 24-hour format for Dutch and other European locales
-      const use24Hour = ['nl', 'de', 'fr', 'es', 'pt', 'ru'].includes(locale);
+      intervalAmount = 1;
       formatString = use24Hour ? 'H' : 'h A';
-    } else if (zoom >= 2) {
-      // 200% zoom - show day descriptions (with months above)
+    } else if (visibleDays <= 60) {
+      // Zoomed in to normal: 3-60 days visible - show day numbers only (with months above)
       intervalUnit = 'day';
       intervalAmount = 1;
-      // Dutch format: "zo. 28 sep", others: "zo. sep 28"
-      formatString = locale === 'nl' ? 'ddd D MMM' : 'ddd MMM D';
-    } else if (zoom >= 0.5) {
-      // Default zoom - show days (with months above)
-      intervalUnit = 'day';
+      formatString = 'D'; // Just day number (e.g., "22")
+    } else if (visibleDays <= 180) {
+      // Zoomed out: 60-180 days visible - show months (with quarters above)
+      intervalUnit = 'month';
       intervalAmount = 1;
-      formatString = 'D';
+      formatString = 'MMM';
     } else {
-      // Zoomed out - show months (with years above)
+      // Very zoomed out: > 180 days visible - show months (with years above)
       intervalUnit = 'month';
       intervalAmount = 1;
       formatString = 'MMM';
