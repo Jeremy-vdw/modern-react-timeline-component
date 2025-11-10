@@ -128,8 +128,8 @@ function App() {
 | `locale` | `string` | `'en'` | Locale code for date/time formatting |
 | `defaultTimeStart` | `Date` | 6 months ago | Start of the total scrollable range |
 | `defaultTimeEnd` | `Date` | 6 months ahead | End of the total scrollable range |
-| `visibleTimeStart` | `Date` | 3 days ago | Initial visible range start |
-| `visibleTimeEnd` | `Date` | 4 days ahead | Initial visible range end |
+| `visibleTimeStart` | `Date` | 3 days ago | Defines the start of the visible range at 100% zoom |
+| `visibleTimeEnd` | `Date` | 4 days ahead | Defines the end of the visible range at 100% zoom |
 | `stickyHeader` | `boolean` | `true` | Enable sticky date headers |
 | `editable` | `boolean` | `true` | Allow drag and resize |
 | `selectable` | `boolean` | `true` | Allow item selection |
@@ -146,6 +146,35 @@ function App() {
 | `onItemSelect` | `function` | - | Called when item selection changes |
 | `onItemMove` | `function` | - | Called when item is dragged |
 | `onItemResize` | `function` | - | Called when item is resized |
+
+#### Understanding Time Ranges
+
+The timeline uses two different time range concepts:
+
+- **Total Range** (`defaultTimeStart` / `defaultTimeEnd`): Defines the entire scrollable area. Users can scroll through this entire range. Defaults to 6 months before and after today.
+
+- **Visible Range** (`visibleTimeStart` / `visibleTimeEnd`): Defines what time period is shown at 100% zoom level. This controls the "base" zoom - at zoom level 1.0, exactly this time range fits in the viewport. Defaults to 1 week (3 days before, 4 days after today).
+
+**Example:**
+```typescript
+<Timeline
+  // Total scrollable range: 1 year
+  defaultTimeStart={dayjs().subtract(6, 'month').toDate()}
+  defaultTimeEnd={dayjs().add(6, 'month').toDate()}
+
+  // At 100% zoom, show 5 weeks
+  visibleTimeStart={dayjs().startOf('week').toDate()}
+  visibleTimeEnd={dayjs().add(4, 'week').endOf('week').toDate()}
+
+  // ... other props
+/>
+```
+
+In this example:
+- Users can scroll through a full year of data
+- At 100% zoom, they see 5 weeks at a time
+- Zooming in (200%) shows ~2.5 weeks
+- Zooming out (50%) shows ~10 weeks
 
 ### Type Definitions
 

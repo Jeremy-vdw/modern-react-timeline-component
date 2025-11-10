@@ -23,6 +23,9 @@ interface TimelineGroupProps {
   timelineWidth: number;
   locale?: string;
   itemRenderer?: (props: ItemRendererProps) => React.ReactNode;
+  visibleStart: Date;
+  visibleEnd: Date;
+  zoom: number;
 }
 
 const TimelineGroupComponent = ({
@@ -44,8 +47,16 @@ const TimelineGroupComponent = ({
   timelineWidth,
   locale = 'en',
   itemRenderer,
+  visibleStart,
+  visibleEnd,
+  zoom,
 }: TimelineGroupProps) => {
   const totalDuration = dayjs(timeEnd).diff(dayjs(timeStart));
+
+  // Calculate what's actually visible at current zoom
+  const baseVisibleDuration = dayjs(visibleEnd).diff(dayjs(visibleStart));
+  const actualVisibleDuration = baseVisibleDuration / zoom;
+  const visibleDays = actualVisibleDuration / (24 * 60 * 60 * 1000);
 
   const getItemPosition = (item: TimelineItem) => {
     const itemStartDay = dayjs(item.start);
@@ -67,37 +78,53 @@ const TimelineGroupComponent = ({
 
   // Memoize grid lines to prevent recalculation on every render
   // Optimized: Only render lines that are at least 2px apart for better performance
+  // Grid interval adapts based on visible duration to match header granularity
   const gridLines = useMemo(() => {
     const lines = [];
     const timeStartDay = dayjs(timeStart);
     const timeEndDay = dayjs(timeEnd);
-
-    // Start from the beginning of the first day
-    let currentDay = timeStartDay.startOf('day');
     let lastRenderedPosition = -10; // Track last rendered position to avoid overlapping lines
 
-    // Create a line for each day boundary
-    while (currentDay.isBefore(timeEndDay) || currentDay.isSame(timeEndDay, 'day')) {
-      const dayRatio = (currentDay.valueOf() - timeStartDay.valueOf()) / totalDuration;
-      const leftPosition = dayRatio * timelineWidth;
+    // Determine grid interval based on visible duration
+    let intervalUnit: 'hour' | 'day' | 'month';
+    let intervalAmount = 1;
+
+    if (visibleDays <= 3) {
+      // Very zoomed in: show hour boundaries
+      intervalUnit = 'hour';
+    } else if (visibleDays <= 60) {
+      // Normal zoom: show day boundaries (current behavior)
+      intervalUnit = 'day';
+    } else {
+      // Zoomed out (quarterly view): show month boundaries
+      intervalUnit = 'month';
+    }
+
+    // Start from the beginning of the first interval
+    let current = timeStartDay.startOf(intervalUnit);
+
+    // Create a line for each interval boundary
+    while (current.isBefore(timeEndDay) || current.isSame(timeEndDay, intervalUnit)) {
+      const ratio = (current.valueOf() - timeStartDay.valueOf()) / totalDuration;
+      const leftPosition = ratio * timelineWidth;
 
       // Only render if position is within timeline and at least 2px from last line
       if (leftPosition >= 0 && leftPosition <= timelineWidth && leftPosition - lastRenderedPosition >= 2) {
         lines.push(
           <div
-            key={currentDay.format('YYYY-MM-DD')}
-            className="absolute top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-600 opacity-30"
-            style={{ left: `${leftPosition}px` }}
+            key={current.format('YYYY-MM-DD-HH')}
+            className="absolute top-0 bottom-0 w-px"
+            style={{ left: `${leftPosition}px`, backgroundColor: '#f5f5f5' }}
           />
         );
         lastRenderedPosition = leftPosition;
       }
 
-      currentDay = currentDay.add(1, 'day');
+      current = current.add(intervalAmount, intervalUnit);
     }
 
     return lines;
-  }, [timeStart, timeEnd, timelineWidth, totalDuration]);
+  }, [timeStart, timeEnd, timelineWidth, totalDuration, visibleDays]);
 
   return (
     <div
