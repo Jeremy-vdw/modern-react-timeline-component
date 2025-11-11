@@ -340,11 +340,12 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   const handleScrollToToday = useCallback(() => {
     if (contentScrollRef.current && headerScrollRef.current) {
       const nowRatio = dayjs().diff(dayjs(timeStart)) / totalDuration;
-      const containerWidth = contentScrollRef.current.clientWidth || 800;
-      const scrollPosition = (nowRatio * timelineWidth) - (containerWidth / 2);
-      const maxScroll = Math.max(0, timelineWidth - containerWidth);
+      const referenceWidth = 800; // Use same reference width as baseWidth calculation
+      const scrollPosition = (nowRatio * timelineWidth) - (referenceWidth / 2);
+      const actualContainerWidth = contentScrollRef.current.clientWidth;
+      const maxScroll = Math.max(0, timelineWidth - actualContainerWidth);
       const clampedScroll = Math.max(0, Math.min(maxScroll, scrollPosition));
-      
+
       // Apply scroll position smoothly
       contentScrollRef.current.scrollTo({ left: clampedScroll, behavior: 'smooth' });
       headerScrollRef.current.scrollLeft = clampedScroll;
@@ -357,15 +358,16 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
       // Calculate new zoom and scroll position
       const newZoom = 1;
       const nowRatio = dayjs().diff(dayjs(timeStart)) / totalDuration;
-      const containerWidth = contentScrollRef.current.clientWidth || 800;
+      const referenceWidth = 800; // Use same reference width as baseWidth calculation
       const newTimelineWidth = baseWidth * newZoom;
-      const scrollPosition = (nowRatio * newTimelineWidth) - (containerWidth / 2);
-      const maxScroll = Math.max(0, newTimelineWidth - containerWidth);
+      const scrollPosition = (nowRatio * newTimelineWidth) - (referenceWidth / 2);
+      const actualContainerWidth = contentScrollRef.current.clientWidth;
+      const maxScroll = Math.max(0, newTimelineWidth - actualContainerWidth);
       const clampedScroll = Math.max(0, Math.min(maxScroll, scrollPosition));
-      
+
       // Update zoom state
       setZoom(newZoom);
-      
+
       // Apply scroll position after the DOM updates
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -448,15 +450,10 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   // Auto-scroll to show the visible range on mount
   useEffect(() => {
     if (contentScrollRef.current && headerScrollRef.current) {
-      // Calculate scroll position to center the visible range
-      const visibleMidpoint = dayjs(visibleStart).add(
-        dayjs(visibleEnd).diff(dayjs(visibleStart)) / 2
-      );
-      const midpointRatio = visibleMidpoint.diff(dayjs(timeStart)) / totalDuration;
+      // Calculate scroll position to align visibleStart with left edge of viewport
+      const visibleStartRatio = dayjs(visibleStart).diff(dayjs(timeStart)) / totalDuration;
       const containerWidth = contentScrollRef.current.clientWidth || 800;
-
-      // Position so visible range midpoint is roughly in center of viewport
-      const scrollPosition = (midpointRatio * timelineWidth) - (containerWidth / 2);
+      const scrollPosition = visibleStartRatio * timelineWidth;
       const maxScroll = timelineWidth - containerWidth;
 
       const clampedScroll = Math.max(0, Math.min(maxScroll, scrollPosition));
