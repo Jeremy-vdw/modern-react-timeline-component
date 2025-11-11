@@ -208,6 +208,10 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
 
   const [zoom, setZoom] = useState(1);
 
+  // Track the actual timeline content area width (viewport - sidebar)
+  // Default to 800px as fallback before ResizeObserver measures actual width
+  const [containerWidth, setContainerWidth] = useState(800);
+
   const totalDuration = dayjs(timeEnd).diff(dayjs(timeStart));
   const laneHeight = rowHeight; // Height of each lane within a group
 
@@ -241,10 +245,21 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
 
   // Calculate timeline content width based on visible range
   // At 100% zoom, the visible range should fit exactly in the viewport
-  const containerWidth = 800; // Approximate timeline container width
-  const visibleDuration = dayjs(visibleEnd).diff(dayjs(visibleStart));
-  const baseWidth = (totalDuration / visibleDuration) * containerWidth;
-  const timelineWidth = baseWidth * zoom;
+  // containerWidth is tracked dynamically via ResizeObserver
+  const visibleDuration = useMemo(() =>
+    dayjs(visibleEnd).diff(dayjs(visibleStart)),
+    [visibleStart, visibleEnd]
+  );
+
+  const baseWidth = useMemo(() =>
+    (totalDuration / visibleDuration) * containerWidth,
+    [totalDuration, visibleDuration, containerWidth]
+  );
+
+  const timelineWidth = useMemo(() =>
+    baseWidth * zoom,
+    [baseWidth, zoom]
+  );
 
   // Calculate dynamic zoom limits based on visible range
   // Max zoom: when viewport shows 1 day
@@ -340,16 +355,15 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   const handleScrollToToday = useCallback(() => {
     if (contentScrollRef.current && headerScrollRef.current) {
       const nowRatio = dayjs().diff(dayjs(timeStart)) / totalDuration;
-      const containerWidth = contentScrollRef.current.clientWidth || 800;
       const scrollPosition = (nowRatio * timelineWidth) - (containerWidth / 2);
       const maxScroll = Math.max(0, timelineWidth - containerWidth);
       const clampedScroll = Math.max(0, Math.min(maxScroll, scrollPosition));
-      
+
       // Apply scroll position smoothly
       contentScrollRef.current.scrollTo({ left: clampedScroll, behavior: 'smooth' });
       headerScrollRef.current.scrollLeft = clampedScroll;
     }
-  }, [timeStart, totalDuration, timelineWidth]);
+  }, [timeStart, totalDuration, timelineWidth, containerWidth]);
 
   // Double click: reset zoom to 100% AND scroll to today
   const handleGoHome = useCallback(() => {
@@ -357,15 +371,14 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
       // Calculate new zoom and scroll position
       const newZoom = 1;
       const nowRatio = dayjs().diff(dayjs(timeStart)) / totalDuration;
-      const containerWidth = contentScrollRef.current.clientWidth || 800;
       const newTimelineWidth = baseWidth * newZoom;
       const scrollPosition = (nowRatio * newTimelineWidth) - (containerWidth / 2);
       const maxScroll = Math.max(0, newTimelineWidth - containerWidth);
       const clampedScroll = Math.max(0, Math.min(maxScroll, scrollPosition));
-      
+
       // Update zoom state
       setZoom(newZoom);
-      
+
       // Apply scroll position after the DOM updates
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -376,7 +389,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
         });
       });
     }
-  }, [timeStart, totalDuration, baseWidth]);
+  }, [timeStart, totalDuration, baseWidth, containerWidth]);
 
 
 
@@ -445,18 +458,34 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
     }
   }, [stickyHeader]);
 
+  // Track container width changes for responsive timeline
+  // We observe headerScrollRef because it represents the timeline content area (excluding sidebar)
+  useEffect(() => {
+    if (!headerScrollRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Get the actual timeline content area width (viewport - sidebar)
+        const width = entry.contentRect.width;
+        if (width > 0) {
+          setContainerWidth(width);
+        }
+      }
+    });
+
+    resizeObserver.observe(headerScrollRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // Auto-scroll to show the visible range on mount
   useEffect(() => {
     if (contentScrollRef.current && headerScrollRef.current) {
-      // Calculate scroll position to center the visible range
-      const visibleMidpoint = dayjs(visibleStart).add(
-        dayjs(visibleEnd).diff(dayjs(visibleStart)) / 2
-      );
-      const midpointRatio = visibleMidpoint.diff(dayjs(timeStart)) / totalDuration;
-      const containerWidth = contentScrollRef.current.clientWidth || 800;
-
-      // Position so visible range midpoint is roughly in center of viewport
-      const scrollPosition = (midpointRatio * timelineWidth) - (containerWidth / 2);
+      // Calculate scroll position to align visibleStart with left edge of viewport
+      const visibleStartRatio = dayjs(visibleStart).diff(dayjs(timeStart)) / totalDuration;
+      const scrollPosition = visibleStartRatio * timelineWidth;
       const maxScroll = timelineWidth - containerWidth;
 
       const clampedScroll = Math.max(0, Math.min(maxScroll, scrollPosition));
@@ -464,7 +493,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
       contentScrollRef.current.scrollLeft = clampedScroll;
       headerScrollRef.current.scrollLeft = clampedScroll;
     }
-  }, [timelineWidth, totalDuration, timeStart, visibleStart, visibleEnd]); // Update when width or visible range changes
+  }, [timelineWidth, totalDuration, timeStart, visibleStart, visibleEnd, containerWidth]); // Update when width or visible range changes
 
   const handleItemClick = useCallback(
     (item: TimelineItem) => {
