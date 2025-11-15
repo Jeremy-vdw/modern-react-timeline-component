@@ -135,6 +135,7 @@ function App() {
 | `selectable` | `boolean` | `true` | Allow item selection |
 | `showLegend` | `boolean` | `true` | Show category legend |
 | `showControls` | `boolean` | `true` | Show zoom/navigation controls |
+| `showZoomLevel` | `boolean` | `true` | Show zoom level percentage in controls |
 | `groupBarWidth` | `number` | `192` | Width of the group labels column (px) |
 | `rowHeight` | `number` | `60` | Height of each timeline row/group (px) |
 | `selectedItemId` | `string \| null` | `null` | ID of currently selected item |

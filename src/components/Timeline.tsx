@@ -107,6 +107,7 @@ export interface ControlsRendererProps {
     zoom: number;
     canZoomIn: boolean;
     canZoomOut: boolean;
+    showZoomLevel: boolean;
   };
 }
 
@@ -129,6 +130,7 @@ interface TimelineProps {
   selectable?: boolean;
   showLegend?: boolean;
   showControls?: boolean;
+  showZoomLevel?: boolean;
   groupBarWidth?: number;
   rowHeight?: number;
   selectedItemId?: string | null;
@@ -164,6 +166,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
   selectable = true,
   showLegend = true,
   showControls = true,
+  showZoomLevel = true,
   groupBarWidth = 192,
   rowHeight = 60,
   selectedItemId = null,
@@ -677,9 +680,11 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
         </Button>
       </div>
 
-      <div className="text-sm text-muted-foreground ml-auto">
-        Zoom: {Math.round(state.zoom * 100)}%
-      </div>
+      {state.showZoomLevel && (
+        <div className="text-sm text-muted-foreground ml-auto">
+          Zoom: {Math.round(state.zoom * 100)}%
+        </div>
+      )}
     </div>
   );
 
@@ -702,6 +707,7 @@ const TimelineComponent = forwardRef<TimelineRef, TimelineProps>(({
           zoom: zoom,
           canZoomIn: zoom < maxZoom,
           canZoomOut: zoom > minZoom,
+          showZoomLevel: showZoomLevel,
         },
       })}
 
