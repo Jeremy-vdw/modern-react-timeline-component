@@ -44,6 +44,7 @@ export interface TimelineItem {
   };
   category?: string; // Reference to category ID
   style?: React.CSSProperties;
+  [key: string]: any; // Allow additional custom properties
 }
 
 export interface TimelineGroupData {
