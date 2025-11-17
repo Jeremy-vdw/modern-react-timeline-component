@@ -39,39 +39,35 @@ pnpm add modern-react-timeline-component
 
 ### Peer Dependencies
 
-Make sure you have these installed:
-
 ```bash
 npm install react react-dom dayjs lucide-react
 ```
 
-### Setup Tailwind CSS
+### Setup for Tailwind CSS Users (Optional)
 
-This component requires Tailwind CSS. Add the component path to your `tailwind.config.js`:
+If you're using Tailwind CSS in your project, use our preset for optimal integration:
 
 ```js
+// tailwind.config.js
 module.exports = {
+  presets: [
+    require('modern-react-timeline-component/tailwind-preset')
+  ],
   content: [
     './src/**/*.{js,jsx,ts,tsx}',
-    './node_modules/modern-react-timeline-component/dist/**/*.{js,mjs}',
+    // your other content paths...
   ],
   // ... rest of your config
 }
 ```
 
-### Import Styles
-
-Import the component styles in your main CSS file or entry point:
-
-```tsx
-import 'modern-react-timeline-component/styles';
-```
+**That's it!** Styles are automatically imported. No manual CSS imports needed.
 
 ## Quick Start
 
 ```tsx
 import { Timeline, TimelineItem, TimelineGroupData, Category } from 'modern-react-timeline-component';
-import 'modern-react-timeline-component/styles';
+// No need to import styles - they're included automatically!
 
 const groups: TimelineGroupData[] = [
   { id: 'group-1', title: 'Team Alpha' },
@@ -79,8 +75,8 @@ const groups: TimelineGroupData[] = [
 ];
 
 const categories: Category[] = [
-  { 
-    id: 'dev', 
+  {
+    id: 'dev',
     title: 'Development',
     background_color: '#3b82f6',
     text_color: '#ffffff'
