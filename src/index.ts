@@ -1,3 +1,6 @@
+// Auto-import styles for zero-config setup
+import './styles.css';
+
 // Main Timeline component
 export { Timeline } from './components/Timeline';
 

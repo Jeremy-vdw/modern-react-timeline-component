@@ -71,9 +71,20 @@ export default defineConfig({
           'react-dom': 'ReactDOM',
           'react/jsx-runtime': 'jsxRuntime',
         },
+        // Ensure CSS is extracted to a separate file named style.css
+        assetFileNames: (assetInfo) => {
+          // Check if it's a CSS file by looking at the file extension
+          const fileName = assetInfo.names?.[0] || assetInfo.originalFileNames?.[0] || '';
+          if (fileName.endsWith('.css')) {
+            return 'style.css';
+          }
+          return 'assets/[name][extname]';
+        },
       },
     },
     sourcemap: true,
     emptyOutDir: true,
+    // Ensure CSS is extracted
+    cssCodeSplit: false,
   },
 });

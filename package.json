@@ -1,6 +1,6 @@
 {
   "name": "modern-react-timeline-component",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A modern, interactive timeline component for React with drag-and-drop, zoom, and customizable rendering",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -12,10 +12,12 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
-    "./styles": "./dist/style.css"
+    "./styles": "./dist/style.css",
+    "./tailwind-preset": "./tailwind-preset.js"
   },
   "files": [
     "dist",
+    "tailwind-preset.js",
     "README.md",
     "LICENSE"
   ],
