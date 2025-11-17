@@ -3,12 +3,17 @@ import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
 
 export default defineConfig({
   plugins: [
     react(),
-
+    cssInjectedByJsPlugin({
+      // Inject CSS into JS for zero-config usage
+      // This makes the library work out of the box without manual CSS imports
+      styleId: 'modern-react-timeline-styles',
+    }),
     dts({
       insertTypesEntry: true,
       include: ['src'],

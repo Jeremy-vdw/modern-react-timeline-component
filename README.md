@@ -43,9 +43,22 @@ pnpm add modern-react-timeline-component
 npm install react react-dom dayjs lucide-react
 ```
 
-### Setup for Tailwind CSS Users (Optional)
+### ✨ Zero-Config Setup
 
-If you're using Tailwind CSS in your project, use our preset for optimal integration:
+**That's it!** The component works out of the box with **zero configuration**:
+
+- ✅ **CSS is automatically injected** - No manual imports needed
+- ✅ **Works with any bundler** - Webpack, Vite, Next.js, etc.
+- ✅ **No build configuration required** - Just import and use
+
+```tsx
+import { Timeline } from 'modern-react-timeline-component';
+// Styles are automatically included - nothing else needed!
+```
+
+### Optional: Tailwind CSS Integration
+
+If you're using Tailwind CSS and want to customize the component's styles, you can optionally use our preset:
 
 ```js
 // tailwind.config.js
@@ -61,13 +74,12 @@ module.exports = {
 }
 ```
 
-**That's it!** Styles are automatically imported. No manual CSS imports needed.
+**Note:** This is completely optional. The component works perfectly without any Tailwind configuration.
 
 ## Quick Start
 
 ```tsx
 import { Timeline, TimelineItem, TimelineGroupData, Category } from 'modern-react-timeline-component';
-// No need to import styles - they're included automatically!
 
 const groups: TimelineGroupData[] = [
   { id: 'group-1', title: 'Team Alpha' },
